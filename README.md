@@ -43,7 +43,7 @@ The script is owned by root, so nothing running under your account can edit it t
 
 The client runs as three launchd services: one system daemon (`com.paloaltonetworks.gp.pangpsd`) and two login agents (`com.paloaltonetworks.gp.pangps` and `com.paloaltonetworks.gp.pangpa`). Running `off` disables each service with `launchctl disable` and stops it with `launchctl bootout`. Running `on` re-enables each service and starts it with `launchctl bootstrap`.
 
-PanGPS sometimes ignores the stop signal, for example while the VPN is connected. After 20 seconds launchd kills it, so it skips its own cleanup. Its tunnel then stays registered as the primary network service with no interface behind it, and Wi-Fi stops working. For that reason `off` waits up to 30 seconds for PanGPS to exit. It then removes the leftover `State:/Network/Service/gpd.pan/*` keys, which is the same cleanup PanGPS runs on its next start.
+PanGPS ignores the stop signal while the VPN is connected. A killed PanGPS skips its own cleanup. Its tunnel then stays registered as the primary network service with no interface behind it, and Wi-Fi stops working. For that reason `off` gives PanGPS 5 seconds to exit, then kills it. It then removes the leftover `State:/Network/Service/gpd.pan/*` keys, which is the same cleanup PanGPS runs on its next start.
 
 Palo Alto documents the same service-level approach in [How to manually stop and start PanGPS or PanGPA on macOS](https://knowledgebase.paloaltonetworks.com/kCSArticleDetail?id=kA10g0000008UGs).
 

@@ -9,8 +9,11 @@ readonly DAEMON=com.paloaltonetworks.gp.pangpsd
 readonly AGENTS=(com.paloaltonetworks.gp.pangps com.paloaltonetworks.gp.pangpa)
 # Network state PanGPS publishes for its tunnel. It removes these keys itself on a clean exit.
 readonly TUNNEL_STATE_KEYS='State:/Network/Service/gpd\.pan/.*'
-# launchd kills PanGPS 20 seconds after asking it to quit (ExitTimeOut in its plist).
-readonly EXIT_WAIT_SECONDS=30
+# PanGPS quits in about 2 seconds when disconnected but ignores the request
+# while connected. Kill it after this grace period instead of waiting the
+# 20 seconds launchd allows (ExitTimeOut in its plist).
+readonly QUIT_GRACE_SECONDS=5
+readonly KILL_WAIT_SECONDS=5
 
 usage() {
   echo "usage: globalprotect on|off" >&2
@@ -39,16 +42,22 @@ stop_service() {
 }
 
 # bootout returns before PanGPS exits, so poll for it.
+# $1 = seconds to wait. Returns 1 if PanGPS is still running.
 wait_for_pangps_exit() {
   local waited=0
   while pgrep -x PanGPS >/dev/null; do
-    if ((waited >= EXIT_WAIT_SECONDS)); then
-      echo "PanGPS still running after ${EXIT_WAIT_SECONDS}s" >&2
-      return 1
-    fi
+    ((waited < $1)) || return 1
     sleep 1
     ((waited += 1))
   done
+}
+
+stop_pangps() {
+  wait_for_pangps_exit "$QUIT_GRACE_SECONDS" && return 0
+  pkill -KILL -x PanGPS || true
+  wait_for_pangps_exit "$KILL_WAIT_SECONDS" && return 0
+  echo "PanGPS still running after kill" >&2
+  return 1
 }
 
 # A killed PanGPS leaves its tunnel as the primary network service with no
@@ -75,7 +84,7 @@ case $1 in
       stop_service "$USER_DOMAIN" "$agent"
     done
     stop_service system "$DAEMON"
-    wait_for_pangps_exit
+    stop_pangps
     remove_stale_tunnel_state
     echo "GlobalProtect off. It stays off after reboot."
     ;;
