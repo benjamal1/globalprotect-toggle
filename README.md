@@ -41,7 +41,7 @@ The script is owned by root, so nothing running under your account can edit it t
 
 ## How it works
 
-The client runs as three launchd services: one system daemon (`com.paloaltonetworks.gp.pangpsd`) and two login agents (`com.paloaltonetworks.gp.pangps` and `com.paloaltonetworks.gp.pangpa`). Running `off` disables each service with `launchctl disable` and stops it with `launchctl bootout`. Running `on` re-enables each service and starts it with `launchctl bootstrap`.
+The client runs as three launchd services: one system daemon (`com.paloaltonetworks.gp.pangpsd`) and two login agents (`com.paloaltonetworks.gp.pangps` and `com.paloaltonetworks.gp.pangpa`). Running `off` disables each service with `launchctl disable` and stops it with `launchctl bootout`. Running `on` re-enables each service and starts the two agents with `launchctl bootstrap`. It leaves the daemon stopped until the next boot. Each PanGPS sends SIGTERM to any other PanGPS it finds at startup, so starting the daemon and agent together kills both. The agent then reports "The virtual adapter was not set up correctly due to a delay." The agent handles the VPN on its own while you're logged in.
 
 PanGPS ignores the stop signal while the VPN is connected. A killed PanGPS skips its own cleanup. Its tunnel then stays registered as the primary network service with no interface behind it, and Wi-Fi stops working. For that reason `off` gives PanGPS 5 seconds to exit, then kills it. It then removes the leftover `State:/Network/Service/gpd.pan/*` keys, which is the same cleanup PanGPS runs on its next start.
 

@@ -73,7 +73,10 @@ remove_stale_tunnel_state() {
 
 case $1 in
   on)
-    start_service system "$DAEMON" "/Library/LaunchDaemons/$DAEMON.plist"
+    # Enable the daemon for the next boot but leave it stopped. Started within
+    # milliseconds of the agent, each PanGPS sends SIGTERM to the other, and the
+    # agent's tunnel driver then fails with "virtual adapter was not set up".
+    launchctl enable "system/$DAEMON"
     for agent in "${AGENTS[@]}"; do
       start_service "$USER_DOMAIN" "$agent" "/Library/LaunchAgents/$agent.plist"
     done
